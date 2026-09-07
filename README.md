@@ -242,27 +242,3 @@ If you finish early, edit a copy of `wordcount.py` and resubmit it. Ideas: show 
 most frequent words (`.limit(10)`), make the count case-insensitive (`lower(col("value"))`),
 or count words per line length. Notice what changing the analysis costs you here compared
 with L4.
-
----
-
-## Troubleshooting
-
-- **`no configuration file provided: not found`**: you are not in the folder that contains
-  `docker-compose.yml`. `cd` into your repository first.
-- **The master page shows no workers**: they may still be starting; wait a few seconds and
-  refresh. If they never appear, `docker compose logs spark-worker-1`.
-- **`Path does not exist: .../input.txt`**: the path is inside the container. Check that the
-  file is at `shared-folder/input/data/input.txt` on your machine and that you used the
-  `/opt/spark/work-dir/shared/...` path in the command.
-- **`python3: can't open file '/opt/spark/work-dir/wordcount.py'`**: step 6 needs the
-  `docker cp` first.
-- **`path ... already exists`**: the output directory exists from a previous run. Delete it
-  or use a new name.
-- **`Permission denied` when writing the output (Linux)**: the containers run as user
-  `spark` (uid 185). Run `chmod -R a+rwX shared-folder` on your machine and try again.
-- **Job accepted but no progress, `Initial job has not accepted any resources`**: the
-  workers have no free cores, usually because a shell from step 3 is still open. Close it.
-- **Port 8080 or 4040 already in use**: something else is on it. Stop it, or change the
-  mapping in `docker-compose.yml`.
-- **`docker exec` says no such container**: the cluster is not running. `docker ps` should
-  list `spark-master`, `spark-worker-1` and `spark-worker-2`.
