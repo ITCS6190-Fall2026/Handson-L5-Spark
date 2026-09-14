@@ -25,9 +25,9 @@ README, say where and why.
 
 ```
 
-### The output the application produced
+### The output of part 1
 
-Paste the contents of the `part-...txt` file here.
+Paste the contents of the `part-...txt` file from `shared-folder/output/wordcount/`.
 
 ```
 
@@ -42,23 +42,43 @@ A few sentences on what you actually noticed. Some things worth looking at:
 - What the master page at <http://localhost:8080> showed when the shell connected
 - How many tasks and executors the Spark UI at <http://localhost:4040> listed for `show`
 - How long the job took, in the shell and with `spark-submit`
-- Whether the output matched your L4 result
 
 
 
 ---
 
-## L4 versus L5
+## What I changed
 
-List the L4 steps and the L5 steps side by side, then answer: which steps disappeared, and
-what in Spark's design made them unnecessary? Which parts of the work are still the same,
-even if you did not see them?
+The three changes you made to `wordcount.py`. Paste the lines you added or rewrote
+(`git diff` gives you exactly this).
 
-| Hands-on L4 (Hadoop) | Hands-on L5 (Spark) |
-| -------------------- | ------------------- |
-|                      |                     |
-|                      |                     |
-|                      |                     |
+```python
+
+```
+
+---
+
+## What the changes did
+
+### The three numbers
+
+| Run | Min length | Words scanned | Words kept | Distinct words |
+| --- | ---------- | ------------- | ---------- | -------------- |
+| `wordcount-v2` | 3 | | | |
+| `wordcount-long` | | | | |
+
+### The three outputs compared
+
+How many distinct words did folding the case remove (compare `wordcount/` with
+`wordcount-v2/`)? How many did the longer minimum remove? Name one word from your own text
+whose count changed when the counting became case-insensitive.
+
+
+
+### Jobs
+
+How many jobs did your run launch, according to the **Jobs** tab, and how does that compare
+with the original program? Why does Spark read the same file more than once in a single run?
 
 
 

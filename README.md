@@ -8,9 +8,10 @@ pulled back out. In this hands-on you run the **same word count on Apache Spark*
 interactively in the PySpark shell, then as an application submitted with `spark-submit`. Along
 the way you will watch the job in the Spark UI.
 
-Everything you need is in this repository. **You are not writing any code.** The point is to
-go through the same cycle as in L4 and notice which steps are still there and which ones are
-gone.
+The hands-on has two parts. In **part 1** you run the program exactly as it is given, to go
+through the whole cycle and see it in the Spark UI. In **part 2** you change the program: you
+make the counting case-insensitive, turn the minimum word length into a parameter, and add
+three numbers to the output. Then you run it again, twice, without rebuilding anything.
 
 **Worth 1 point.** Submit the repository link on Canvas by 11:59 pm on the day of the class.
 Work individually.
@@ -55,9 +56,9 @@ same count are listed alphabetically.
 | Path | What it is |
 | ---- | ---------- |
 | `docker-compose.yml` | the cluster: one Spark master and two workers, on the official `apache/spark:4.2.0` image |
-| `wordcount.py` | the word count as a PySpark application (about 20 lines; read it) |
+| `wordcount.py` | the word count as a PySpark application (about 20 lines; read it, then change it in part 2) |
 | `shared-folder/input/data/input.txt` | **placeholder: you replace this with your own text** |
-| `shared-folder/output/` | where the result lands in step 6 |
+| `shared-folder/output/` | where the results land (three runs, three folders) |
 
 `shared-folder/` is mounted into every container at `/opt/spark/work-dir/shared`, so a file
 you put there on your machine is visible to the master and to both workers. There is no HDFS
@@ -78,7 +79,7 @@ docker --version
 
 ---
 
-## Steps
+## Part 1: run the word count as it is given
 
 ### 1. Put your own text in the input file
 
@@ -165,7 +166,93 @@ with the counts, and an empty `_SUCCESS` marker. Same shape as the `part-r-00000
 out of HDFS in L4, but it is already on your disk: the workers wrote it straight into the
 shared folder.
 
-### 8. Stop the cluster
+---
+
+## Part 2: change the code
+
+The program you just ran is case-sensitive and has the number 3 written into it. Now you make
+it yours.
+
+### 8. Make three changes to `wordcount.py`
+
+Edit `wordcount.py` on your machine. All three changes are small; the point is that you have
+to read the code before you can change it.
+
+**Change 1: count words case-insensitively.** `Hadoop`, `hadoop` and `HADOOP` must count as
+one word, reported in lowercase. One function from `pyspark.sql.functions` does this; where
+you apply it is up to you.
+
+**Change 2: make the minimum word length a parameter.** Instead of the 3 written into the
+filter, read it from an optional third command line argument:
+
+```
+spark-submit wordcount.py <input file> [<output directory>] [<min word length>]
+```
+
+When the argument is not given, the minimum stays 3, so the command from step 6 keeps working.
+
+**Change 3: print three numbers before the table.**
+
+```
+<n> words scanned
+<n> words of at least <min> characters
+<n> distinct words
+```
+
+The first is how many words the split produced, the second how many survived the length
+filter, the third how many rows are in the result. A blank line in your input produces one
+empty word, which the filter then drops, so the first two numbers can differ by more than the
+short words you removed.
+
+Keep everything else as it is: the same sort order (count descending, then the word), the same
+one-file output, the same `spark-submit` interface.
+
+### 9. Run your version twice
+
+Copy the file in again after **every** edit, or the cluster keeps running the old one:
+
+```bash
+docker cp wordcount.py spark-master:/opt/spark/work-dir/
+
+docker exec -it spark-master /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /opt/spark/work-dir/wordcount.py \
+  /opt/spark/work-dir/shared/input/data/input.txt \
+  /opt/spark/work-dir/shared/output/wordcount-v2
+```
+
+Then run it once more with a minimum word length of **5 or more**, into a third folder:
+
+```bash
+docker exec -it spark-master /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  /opt/spark/work-dir/wordcount.py \
+  /opt/spark/work-dir/shared/input/data/input.txt \
+  /opt/spark/work-dir/shared/output/wordcount-long 5
+```
+
+Nothing was rebuilt and nothing was redeployed between those two runs: the second one is the
+same application with a different argument.
+
+### 10. Compare the three runs
+
+You now have three results from the same input: `wordcount/` from part 1, `wordcount-v2/` with
+the same minimum but case-insensitive, and `wordcount-long/` with a longer minimum. How many
+distinct words did folding the case remove? How many did the longer minimum remove?
+
+Watch the **Jobs** tab of the application UI at <http://localhost:4040> while one of these
+runs is in progress: it is only there while the application runs, so open it right after you
+press Enter. If you miss it, paste your new lines into the PySpark shell from step 3 instead,
+where the UI stays up as long as the shell is open (close the shell before submitting again,
+or it keeps the cores for itself).
+
+Your version launches more jobs than the original did: two of the three numbers you print are
+new actions, and Spark reads and splits the file again for each of them. A DataFrame is a
+plan, not a stored result, and nothing is kept unless you ask for it. You will also see more
+jobs than you have actions, because Spark runs each shuffle stage of a query as a job of its
+own.
+
+### 11. Stop the cluster
 
 ```bash
 docker compose down
@@ -176,11 +263,13 @@ docker compose down
 ## What to commit
 
 - Your **input dataset** at `shared-folder/input/data/input.txt`
-- The **output** under `shared-folder/output/wordcount/` (the `part-...txt` file; `_SUCCESS`
-  is ignored by `.gitignore`)
+- Your **modified `wordcount.py`**
+- The **three outputs**, under `shared-folder/output/wordcount/`, `wordcount-v2/` and
+  `wordcount-long/` (the `part-...txt` files; `_SUCCESS` and the `.crc` files are ignored by
+  `.gitignore`)
 - Your **report** in `REPORT.md`
 
-Leave this README, `docker-compose.yml` and `wordcount.py` as they are.
+Leave this README and `docker-compose.yml` as they are.
 
 ---
 
@@ -199,12 +288,16 @@ linking to the file.
 ### What I observed
 A few sentences on what you actually noticed: what the master page showed when the shell
 connected, how many tasks and executors the Spark UI listed for `show`, how long the job
-took, whether the output matched your L4 result.
+took.
 
-### L4 versus L5
-Write the L4 steps and the L5 steps side by side (a short table is fine) and answer: which
-steps disappeared, and what in Spark's design made them unnecessary? Which parts of the work
-are still the same, even if you did not see them?
+### What I changed
+The three changes you made to `wordcount.py`, with the lines you added or rewrote. `git diff`
+before you commit gives you exactly this.
+
+### What the changes did
+The three numbers printed by each of your two runs, and the answers to step 10: how many
+distinct words folding the case removed, and how many the longer minimum removed. Then: how
+many jobs did each run launch, and why does the same file get read more than once?
 
 ### Problems and fixes
 Anything that went wrong and what resolved it. The actual error message is worth more than
@@ -236,33 +329,13 @@ There is no need to add the instructor or the TAs as collaborators.
 
 ---
 
-## Optional: change the analysis
+## Optional: stop reading the file three times
 
-If you finish early, edit a copy of `wordcount.py` and resubmit it. Ideas: show only the ten
-most frequent words (`.limit(10)`), make the count case-insensitive (`lower(col("value"))`),
-or count words per line length. Notice what changing the analysis costs you here compared
-with L4.
+If you finish early, fix the waste you saw in step 10. Two ways, both worth trying:
 
----
+- Cache the filtered words (`kept.cache()` or `.persist()`) before the first count. Run again
+  and look at the **Storage** tab of the Spark UI and at the input size of the later jobs.
+- Or compute the numbers in one pass with a single aggregation, for example
+  `kept.agg(count("*"), countDistinct("word"))`, and see how many jobs are left.
 
-## Troubleshooting
-
-- **`no configuration file provided: not found`**: you are not in the folder that contains
-  `docker-compose.yml`. `cd` into your repository first.
-- **The master page shows no workers**: they may still be starting; wait a few seconds and
-  refresh. If they never appear, `docker compose logs spark-worker-1`.
-- **`Path does not exist: .../input.txt`**: the path is inside the container. Check that the
-  file is at `shared-folder/input/data/input.txt` on your machine and that you used the
-  `/opt/spark/work-dir/shared/...` path in the command.
-- **`python3: can't open file '/opt/spark/work-dir/wordcount.py'`**: step 6 needs the
-  `docker cp` first.
-- **`path ... already exists`**: the output directory exists from a previous run. Delete it
-  or use a new name.
-- **`Permission denied` when writing the output (Linux)**: the containers run as user
-  `spark` (uid 185). Run `chmod -R a+rwX shared-folder` on your machine and try again.
-- **Job accepted but no progress, `Initial job has not accepted any resources`**: the
-  workers have no free cores, usually because a shell from step 3 is still open. Close it.
-- **Port 8080 or 4040 already in use**: something else is on it. Stop it, or change the
-  mapping in `docker-compose.yml`.
-- **`docker exec` says no such container**: the cluster is not running. `docker ps` should
-  list `spark-master`, `spark-worker-1` and `spark-worker-2`.
+Say in the report which one you tried and what changed in the UI.
