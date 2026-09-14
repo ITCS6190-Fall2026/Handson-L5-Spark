@@ -56,6 +56,7 @@ same count are listed alphabetically.
 | Path | What it is |
 | ---- | ---------- |
 | `docker-compose.yml` | the cluster: one Spark master and two workers, on the official `apache/spark:4.2.0` image |
+| `docker-compose.codespaces.yml`, `conf/spark-defaults.conf` | the same cluster, for GitHub Codespaces (see step 2) |
 | `wordcount.py` | the word count as a PySpark application (about 20 lines; read it, then change it in part 2) |
 | `shared-folder/input/data/input.txt` | **placeholder: you replace this with your own text** |
 | `shared-folder/output/` | where the results land (three runs, three folders) |
@@ -96,6 +97,18 @@ The first time, Docker downloads the image (about 1 GB). Give the cluster a few 
 open <http://localhost:8080>. You should see the Spark master with **two workers** in state
 ALIVE, each with 2 cores and 2 GB of memory. Compare this page with the NameNode and
 ResourceManager pages from L4: one page, one cluster manager.
+
+**In a GitHub Codespace**, start the cluster with the other compose file instead:
+
+```bash
+docker compose -f docker-compose.codespaces.yml up -d
+```
+
+Inside a Codespace, Docker itself runs in a container and traffic between containers on a
+Compose network can be dropped. The workers then never register with the master and every job
+waits forever with `Initial job has not accepted any resources`. That file puts the whole
+cluster on one network to avoid it. Everything after this step is the same, except that the
+`docker compose down` in step 11 also needs the `-f docker-compose.codespaces.yml` flag.
 
 ### 3. Open the PySpark shell against the cluster
 
